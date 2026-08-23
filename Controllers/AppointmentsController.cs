@@ -1,5 +1,6 @@
 using HealthcareAppointmentSystem.Data;
 using HealthcareAppointmentSystem.Models;
+using HealthcareAppointmentSystem.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,4 +41,61 @@ public async Task<ActionResult<Appointment>> GetAppointment(int id)
 
     return appointment;
 }
+
+[HttpPost]
+public async Task<ActionResult<Appointment>> CreateAppointment(CreateAppointmentDto dto)
+{
+    var patientExists = await _context.Patients
+        .AnyAsync(p => p.PatientId == dto.PatientId);
+
+    if (!patientExists)
+    {
+        return BadRequest($"Patient with ID {dto.PatientId} does not exist.");
+    }
+
+    var providerExists = await _context.Providers
+        .AnyAsync(p => p.ProviderId == dto.ProviderId);
+
+    if (!providerExists)
+    {
+        return BadRequest($"Provider with ID {dto.ProviderId} does not exist.");
+    }
+
+    var appointment = new Appointment
+    {
+        PatientId = dto.PatientId,
+        ProviderId = dto.ProviderId,
+        AppointmentDate = dto.AppointmentDate,
+        Status = "Scheduled",
+        Reason = dto.Reason
+    };
+
+    _context.Appointments.Add(appointment);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(
+        nameof(GetAppointment),
+        new { id = appointment.AppointmentId },
+        appointment);
+}
+
+[HttpDelete("{id}")]
+public async Task<IActionResult> DeleteAppointment(int id)
+{
+    var appointment = await _context.Appointments
+        .FindAsync(id);
+
+    if (appointment == null)
+    {
+        return NotFound();
+    }
+
+    _context.Appointments.Remove(appointment);
+    await _context.SaveChangesAsync();
+
+    return NoContent();
+
+
+}
+
 }
