@@ -79,6 +79,48 @@ public async Task<ActionResult<Appointment>> CreateAppointment(CreateAppointment
         appointment);
 }
 
+[HttpPut("{id}")]
+public async Task<IActionResult> UpdateAppointment(
+    int id,
+    UpdateAppointmentDto dto)
+{
+    var appointment = await _context.Appointments
+        .FindAsync(id);
+
+    if (appointment == null)
+    {
+        return NotFound();
+    }
+
+    var patientExists = await _context.Patients
+        .AnyAsync(p => p.PatientId == dto.PatientId);
+
+    if (!patientExists)
+    {
+        return BadRequest($"Patient with ID {dto.PatientId} does not exist.");
+    }
+
+    var providerExists = await _context.Providers
+        .AnyAsync(p => p.ProviderId == dto.ProviderId);
+
+    if (!providerExists)
+    {
+        return BadRequest($"Provider with ID {dto.ProviderId} does not exist.");
+    }
+
+    appointment.PatientId = dto.PatientId;
+    appointment.ProviderId = dto.ProviderId;
+    appointment.AppointmentDate = dto.AppointmentDate;
+    appointment.Status = dto.Status;
+    appointment.Reason = dto.Reason;
+
+    await _context.SaveChangesAsync();
+
+    return NoContent();
+}
+
+
+
 [HttpDelete("{id}")]
 public async Task<IActionResult> DeleteAppointment(int id)
 {
