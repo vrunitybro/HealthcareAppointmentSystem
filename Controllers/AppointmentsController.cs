@@ -18,21 +18,68 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments()
-    {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Provider)
-            .ToListAsync();
-    }
+public async Task<ActionResult<IEnumerable<AppointmentResponseDto>>> GetAppointments()
+{
+    var appointments = await _context.Appointments
+        .Include(a => a.Patient)
+        .Include(a => a.Provider)
+        .Select(a => new AppointmentResponseDto
+        {
+            AppointmentId = a.AppointmentId,
+            AppointmentDate = a.AppointmentDate,
+            Status = a.Status,
+            Reason = a.Reason,
 
-    [HttpGet("{id}")]
-public async Task<ActionResult<Appointment>> GetAppointment(int id)
+            Patient = new PatientResponseDto
+            {
+                PatientId = a.Patient!.PatientId,
+                FirstName = a.Patient!.FirstName,
+                LastName = a.Patient!.LastName
+            },
+
+            Provider = new ProviderResponseDto
+            {
+                ProviderId = a.Provider!.ProviderId,
+                FirstName = a.Provider!.FirstName,
+                LastName = a.Provider!.LastName,
+                Specialty = a.Provider!.Specialty
+            }
+        })
+        .ToListAsync();
+
+    return appointments;
+}
+
+[HttpGet("{id}")]
+public async Task<ActionResult<AppointmentResponseDto>> GetAppointment(int id)
 {
     var appointment = await _context.Appointments
         .Include(a => a.Patient)
         .Include(a => a.Provider)
-        .FirstOrDefaultAsync(a => a.AppointmentId == id);
+        .Where(a => a.AppointmentId == id)
+        .Select(a => new AppointmentResponseDto
+        {
+            AppointmentId = a.AppointmentId,
+            AppointmentDate = a.AppointmentDate,
+            Status = a.Status,
+            Reason = a.Reason,
+
+            Patient = new PatientResponseDto
+            {
+                PatientId = a.Patient!.PatientId,
+                FirstName = a.Patient.FirstName,
+                LastName = a.Patient.LastName
+            },
+
+            Provider = new ProviderResponseDto
+            {
+                ProviderId = a.Provider!.ProviderId,
+                FirstName = a.Provider.FirstName,
+                LastName = a.Provider.LastName,
+                Specialty = a.Provider.Specialty
+            }
+        })
+        .FirstOrDefaultAsync();
 
     if (appointment == null)
     {
